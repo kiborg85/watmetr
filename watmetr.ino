@@ -1,5 +1,8 @@
 #define PIN 12				// кнопка подключена сюда (PIN --- КНОПКА --- GND)
 #define PIN_tok A0
+#define NUM_READS 20  //количество измерений вольтажа для вычисления среднего
+const float typVbg = 1.095; // 1.0 -- 1.2
+
 #include "GyverButton.h"
 GButton butt1(PIN);
 
@@ -12,6 +15,11 @@ GyverOLED<SSD1306_128x64, OLED_NO_BUFFER> oled;
 int value = 0;
 const int v_tok = A0;
 const int v_volt = A7;
+bool dc;
+static uint32_t tmr_readVolt;
+float val_tok; 
+float val_volt;
+float Vcc;
 
 void setup() {
   Serial.begin(9600);
@@ -45,19 +53,19 @@ void setup() {
   oled.print("PI = ");
   oled.print(pi);
 
-  bool dc=1;
+  dc=1;
 }
 
 void loop() {
   butt1.tick();  
   if (butt1.isClick()) {
-    if ( dc == 1) { dc=0 } else {dc = 1};
+    if ( dc = 1) { dc=0; } else {dc = 1;};
     
   }
 
-  if (millis() - tmr_readVolt > 5000) {  //считываем значение вольтажа аккумулятора
+  if (millis() - tmr_readVolt > 500) {  //считываем значение вольтажа аккумулятора
       tmr_readVolt = millis();
-  if (dc == 1 ) {val_tok = (dataI.readCurrentDC()); } else {val_tok = (dataI.readCurrentAC());}
+  if (dc = 1 ) {val_tok = (dataI.readCurrentDC()); } else {val_tok = (dataI.readCurrentAC());}
   Serial.print ("val_tok = "); Serial.print (val_tok); //Serial.print (" Vcc = "); Serial.println (Vcc); //Serial.print (" val_sred = "); Serial.print (val_sred);
     
   Vcc = readVcc(); //хитрое считывание опорного напряжения (функция readVcc() находится ниже)
@@ -71,8 +79,6 @@ float readVcc() {
   // read multiple values and sort them to take the mode
   float sortedValues[NUM_READS];
   for (int i = 0; i < NUM_READS; i++) {
-    bus.tick();
-    butt1.tick();
     float tmp = 0.0;
     ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
     ADCSRA |= _BV(ADSC); // Start conversion
@@ -113,8 +119,6 @@ float readAnalog(int pin) {
   // read multiple values and sort them to take the mode
   int sortedValues[NUM_READS];
   for (int i = 0; i < NUM_READS; i++) {
-    bus.tick();
-    butt1.tick();
     delay(25);    
     int value = analogRead(pin);
     int j;
