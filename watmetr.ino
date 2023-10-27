@@ -54,23 +54,31 @@ void setup() {
   oled.print(pi);
 
   dc=1;
+  oled.clear();       // очистка
+ Serial.print("!!! STARTED !!!"); Serial.print("\tDC = "); Serial.println(dc);
 }
 
 void loop() {
   butt1.tick();  
-  if (butt1.isClick()) {
-    if ( dc = 1) { dc=0; } else {dc = 1;};
-    
-  }
+  if (butt1.isClick()) { Serial.print("Click");    if ( dc == 1) { dc=0; oled.clear(); } else {dc = 1;}; Serial.print("\tDC = "); Serial.println(dc);}
 
-  if (millis() - tmr_readVolt > 500) {  //считываем значение вольтажа аккумулятора
+  if (millis() - tmr_readVolt > 1000) {  //считываем значение вольтажа аккумулятора
       tmr_readVolt = millis();
-  if (dc = 1 ) {val_tok = (dataI.readCurrentDC()); } else {val_tok = (dataI.readCurrentAC());}
-  Serial.print ("val_tok = "); Serial.print (val_tok); //Serial.print (" Vcc = "); Serial.println (Vcc); //Serial.print (" val_sred = "); Serial.print (val_sred);
-    
-  Vcc = readVcc(); //хитрое считывание опорного напряжения (функция readVcc() находится ниже)
-  val_volt = (readAnalog(A7) * Vcc)/1023/0.242424242424242;
-  Serial.print ("val_volt = "); Serial.print (val_volt);Serial.print (" Vcc = "); Serial.println (Vcc); //Serial.print (" val_sred = "); Serial.print (val_sred);
+      if (dc == 1 ) {val_tok = (dataI.readCurrentDC()); } else {val_tok = (dataI.readCurrentAC());}
+      oled.setScale(1);   // масштаб текста (1..4)
+      oled.home();        // курсор в 0,0
+      oled.print("Ток = "); oled.print(val_tok); 
+      oled.setCursor(0, 1);
+      if (dc == 1) {oled.print(" DC");} else {oled.print(" AC");}
+      Serial.print ("val_tok = "); Serial.print (val_tok); //Serial.print (" Vcc = "); Serial.println (Vcc); //Serial.print (" val_sred = "); Serial.print (val_sred);
+    if (dc == 1) {
+      Vcc = readVcc(); //хитрое считывание опорного напряжения (функция readVcc() находится ниже)
+      val_volt = (readAnalog(A7) * Vcc)/1023/0.3075;
+      Serial.print ("\tval_volt = "); Serial.print (val_volt);Serial.print (" \tVcc = "); Serial.println (Vcc); //Serial.print (" val_sred = "); Serial.print (val_sred);
+      oled.setCursor(0, 3); oled.print("Напряжение = "); oled.print(val_volt);
+      oled.setCursor(0, 4); oled.print("Опорное = "); oled.print(Vcc);
+      oled.setCursor(0, 6); oled.print("Мощьность = "); oled.print(val_tok*val_volt);
+    } else {Serial.println();}
   }
 }
 
@@ -79,6 +87,7 @@ float readVcc() {
   // read multiple values and sort them to take the mode
   float sortedValues[NUM_READS];
   for (int i = 0; i < NUM_READS; i++) {
+      butt1.tick(); if (butt1.isClick()) {  Serial.print("Click");  if ( dc == 1) { dc=0; oled.clear();} else {dc = 1;}; Serial.print("\tDC = "); Serial.println(dc); }
     float tmp = 0.0;
     ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
     ADCSRA |= _BV(ADSC); // Start conversion
@@ -119,6 +128,7 @@ float readAnalog(int pin) {
   // read multiple values and sort them to take the mode
   int sortedValues[NUM_READS];
   for (int i = 0; i < NUM_READS; i++) {
+      butt1.tick();   if (butt1.isClick()) {  Serial.print("Click");  if ( dc == 1) { dc=0; oled.clear(); } else {dc = 1;}; Serial.print("\tDC = "); Serial.println(dc);} 
     delay(25);    
     int value = analogRead(pin);
     int j;
