@@ -17,7 +17,7 @@ void setup() {
 
   // HIGH_PULL - кнопка подключена к GND, пин подтянут к VCC (PIN --- КНОПКА --- GND)
   // LOW_PULL  - кнопка подключена к VCC, пин подтянут к GND
-  butt1.setType(HIGH_PULL);
+  butt1.setType(LOW_PULL);
 
   // NORM_OPEN - нормально-разомкнутая кнопка
   // NORM_CLOSE - нормально-замкнутая кнопка
