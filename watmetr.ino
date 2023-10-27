@@ -43,6 +43,12 @@ void setup() {
 
 void loop() {
   butt1.tick();  
-  if (butt1.isClick()) Serial.println("Click");
+  if (butt1.isClick()) {
+    value++;
+    oled.setCursorXY(20, 50);
+    oled.print("PI = ");
+    oled.print(pi*value);
+    Serial.println("Click");
+  }
 
 }
