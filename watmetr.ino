@@ -43,11 +43,6 @@ void setup() {
 
 void loop() {
   butt1.tick();  
-  if (butt1.isClick()) {
-    value++;         
-    float pi = 3.14*value;
-  oled.print("PI = ");
-  oled.print(pi);
-  }
+  if (butt1.isClick()) Serial.println("Click");
 
 }
