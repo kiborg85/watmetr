@@ -1,12 +1,17 @@
 #define PIN 12				// кнопка подключена сюда (PIN --- КНОПКА --- GND)
-
+#define PIN_tok A0
 #include "GyverButton.h"
 GButton butt1(PIN);
+
+#include <TroykaCurrent.h>
+ACS712 dataI(PIN_tok);
 
 #include <GyverOLED.h>
 GyverOLED<SSD1306_128x64, OLED_NO_BUFFER> oled;
 
 int value = 0;
+const int v_tok = A0;
+const int v_volt = A7;
 
 void setup() {
   Serial.begin(9600);
@@ -39,16 +44,102 @@ void setup() {
   float pi = 3.14;
   oled.print("PI = ");
   oled.print(pi);
+
+  bool dc=1;
 }
 
 void loop() {
   butt1.tick();  
   if (butt1.isClick()) {
-    value++;
-    oled.setCursorXY(20, 50);
-    oled.print("PI = ");
-    oled.print(pi*value);
-    Serial.println("Click");
+    if ( dc == 1) { dc=0 } else {dc = 1};
+    
   }
 
+  if (millis() - tmr_readVolt > 5000) {  //считываем значение вольтажа аккумулятора
+      tmr_readVolt = millis();
+  if (dc == 1 ) {val_tok = (dataI.readCurrentDC()); } else {val_tok = (dataI.readCurrentAC());}
+  Serial.print ("val_tok = "); Serial.print (val_tok); //Serial.print (" Vcc = "); Serial.println (Vcc); //Serial.print (" val_sred = "); Serial.print (val_sred);
+    
+  Vcc = readVcc(); //хитрое считывание опорного напряжения (функция readVcc() находится ниже)
+  val_volt = (readAnalog(A7) * Vcc)/1023/0.242424242424242;
+  Serial.print ("val_volt = "); Serial.print (val_volt);Serial.print (" Vcc = "); Serial.println (Vcc); //Serial.print (" val_sred = "); Serial.print (val_sred);
+  }
 }
+
+//----------фильтр данных (для уменьшения шумов и разброса данных)-------
+float readVcc() {
+  // read multiple values and sort them to take the mode
+  float sortedValues[NUM_READS];
+  for (int i = 0; i < NUM_READS; i++) {
+    bus.tick();
+    butt1.tick();
+    float tmp = 0.0;
+    ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
+    ADCSRA |= _BV(ADSC); // Start conversion
+    delay(25);
+    while (bit_is_set(ADCSRA, ADSC)); // measuring
+    uint8_t low = ADCL; // must read ADCL first - it then locks ADCH
+    uint8_t high = ADCH; // unlocks both
+    tmp = (high << 8) | low;
+    float value = (typVbg * 1023.0) / tmp;
+    int j;
+    if (value < sortedValues[0] || i == 0) {
+      j = 0; //insert at first position
+    }
+    else {
+      for (j = 1; j < i; j++) {
+        if (sortedValues[j - 1] <= value && sortedValues[j] >= value) {
+          // j is insert position
+          break;
+        }
+      }
+    }
+    for (int k = i; k > j; k--) {
+      // move all values higher than current reading up one position
+      sortedValues[k] = sortedValues[k - 1];
+    }
+    sortedValues[j] = value; //insert current reading
+  }
+  //return scaled mode of 10 values
+  float returnval = 0;
+  for (int i = NUM_READS / 2 - 5; i < (NUM_READS / 2 + 5); i++) {
+    returnval += sortedValues[i];
+  }
+  return returnval / 10;
+}
+//----------фильтр данных (для уменьшения шумов и разброса данных) КОНЕЦ-------
+//----------Функция точного определения опорного напряжения для измерения напряжения на акуме-------
+float readAnalog(int pin) {  
+  // read multiple values and sort them to take the mode
+  int sortedValues[NUM_READS];
+  for (int i = 0; i < NUM_READS; i++) {
+    bus.tick();
+    butt1.tick();
+    delay(25);    
+    int value = analogRead(pin);
+    int j;
+    if (value < sortedValues[0] || i == 0) {
+      j = 0; //insert at first position
+    }
+    else {
+      for (j = 1; j < i; j++) {
+        if (sortedValues[j - 1] <= value && sortedValues[j] >= value) {
+          // j is insert position
+          break;
+        }
+      }
+    }
+    for (int k = i; k > j; k--) {
+      // move all values higher than current reading up one position
+      sortedValues[k] = sortedValues[k - 1];
+    }
+    sortedValues[j] = value; //insert current reading
+  }
+  //return scaled mode of 10 values
+  float returnval = 0;
+  for (int i = NUM_READS / 2 - 5; i < (NUM_READS / 2 + 5); i++) {
+    returnval += sortedValues[i];
+  }
+  return returnval / 10;
+}
+//----------Функция точного определения опорного напряжения для измерения напряжения на акуме КОНЕЦ-------
