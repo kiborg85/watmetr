@@ -17,9 +17,12 @@ const int v_tok = A0;
 const int v_volt = A7;
 bool dc;
 static uint32_t tmr_readVolt;
+unsigned long prevMillis;
 float val_tok; 
 float val_volt;
 float Vcc;
+float cap = 0; //начальная ёмкость
+float Wh = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -55,6 +58,7 @@ void setup() {
 
   dc=1;
   oled.clear();       // очистка
+    prevMillis = millis();  //время первого шага
  Serial.print("!!! STARTED !!!"); Serial.print("\tDC = "); Serial.println(dc);
 }
 
@@ -74,9 +78,13 @@ void loop() {
     if (dc == 1) {
       Vcc = readVcc(); //хитрое считывание опорного напряжения (функция readVcc() находится ниже)
       val_volt = (readAnalog(A7) * Vcc)/1023/0.3075;
+      cap += val_tok*(millis()-prevMillis)/3600000*1000; //расчет емкости АКБ в мАч
+      Wh += val_tok*val_volt *(millis() - prevMillis)/3600000; //расчет емкости АКБ в ВтЧ
+      prevMillis = millis();
       Serial.print ("\tval_volt = "); Serial.print (val_volt);Serial.print (" \tVcc = "); Serial.println (Vcc); //Serial.print (" val_sred = "); Serial.print (val_sred);
       oled.setCursor(0, 3); oled.print("Напряжение = "); oled.print(val_volt);
-      oled.setCursor(0, 4); oled.print("Опорное = "); oled.print(Vcc);
+      oled.setCursor(0, 4); oled.print("Опорное = "); oled.print(cap); 
+      oled.setCursor(0, 5); oled.print("мАч = "); oled.print(Vcc); oled.print("ВтЧ = "); oled.print(Wh);
       oled.setCursor(0, 6); oled.print("Мощьность = "); oled.print(val_tok*val_volt);
     } else {Serial.println();}
   }
